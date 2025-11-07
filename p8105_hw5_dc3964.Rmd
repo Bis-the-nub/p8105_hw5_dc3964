@@ -1,0 +1,8 @@
+---
+title: "HW5"
+author: "Rene Chi"
+date: "2025-11-07"
+output: github_document
+---
+
+To be worked on
