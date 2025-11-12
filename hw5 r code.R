@@ -1,19 +1,10 @@
-HW5
-================
-Rene Chi
-2025-11-07
-
 ## Loading packages
-
-``` r
 library(tidyverse)
 library(ggplot2)
 library(broom)
-```
 
 ## Problem 1
 
-``` r
 birthday_pool =
   function(n) {
   birthdays = sample(1:365, size = n, replace = TRUE)
@@ -44,7 +35,7 @@ probability_data |>
   ggplot(aes(x = group_size, y = probability)) +
   geom_line(color = "deepskyblue3", linewidth = 1) +
   geom_point(color = "deepskyblue3", size = 2) +
-  
+
   # mark the critical point when p exceeds 0.5
   geom_hline(yintercept = 0.5, linetype = "dashed", color = "red") +
   geom_vline(xintercept = 23, linetype = "dashed", color = "red") +
@@ -63,19 +54,7 @@ probability_data |>
     plot.subtitle = element_text(hjust = 0.5),
     panel.grid.minor = element_blank()
   )
-```
 
-![](p8105_hw5_dc3964_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
-
-According to the plot, we can see that as group size increases, the
-probability for duplicate birthdays increases as well. Moreover, when
-group size is no smaller than 23, the probability will be greater than
-0.5, which is surprising than initial intuition suggests. This
-phenomenon is also called the birthday paradox.
-
-## Problem 2
-
-``` r
 ## Problem 2
 
 mu_values = c(0, 1, 2, 3, 4, 5, 6)
@@ -124,11 +103,7 @@ summary_stats |>
     title = "Power of the t-test vs. True Mean"
   ) +
   theme_minimal(base_size = 14)
-```
 
-![](p8105_hw5_dc3964_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
-
-``` r
 # plot 2
 mean_estimates =
   simulation_results |>
@@ -152,6 +127,3 @@ mean_estimates |>
     color = "Group"
   ) +
   theme_minimal(base_size = 14)
-```
-
-![](p8105_hw5_dc3964_files/figure-gfm/unnamed-chunk-3-2.png)<!-- -->
