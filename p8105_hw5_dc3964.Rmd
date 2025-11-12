@@ -105,7 +105,9 @@ summary_stats =
     power_or_typeI_error = mean(reject_H0),
     .groups = 'drop'
   )
+```
 
+```{r plot 1}
 # plot power vs true mean
 summary_stats |>
   ggplot(aes(x = true_mu, y = power_or_typeI_error)) +
@@ -117,7 +119,11 @@ summary_stats |>
     title = "Power of the t-test vs. True Mean"
   ) +
   theme_minimal(base_size = 14)
+```
 
+In this plot, when μ = 0, the rejection rate is about 0.05, which matches the expected Type I error rate. As μ increases, the power rises sharply — meaning the t-test becomes more powerful as the true mean moves farther from 0. In other words, larger effect sizes lead to higher power.
+
+```{r plot 2}
 # plot 2
 mean_estimates =
   simulation_results |>
@@ -141,5 +147,103 @@ mean_estimates |>
     color = "Group"
   ) +
   theme_minimal(base_size = 14)
+```
+
+This plot shows two curves:
+
+The solid line represents the average estimate of μ head across all simulations, while the dashed line represents the average μ head only among samples where the null was rejected.
+
+The solid line lies close to the diagonal, showing that μ head is an unbiased estimator of the true mean when considering all samples.
+However, the dashed line (conditional on rejection) deviates from the diagonal — it tends to overestimate μ when μ > 0 and underestimate μ when μ < 0. 
+
+This happens because we’re conditioning on significant results. Only extreme sample means lead to rejection of H0, so these samples are not representative of all possible outcomes.
+
+Therefore, The average μ head among rejected samples is not approximately equal to the true μ. This bias arises from selection on significance (aka the winner’s curse) where estimates from significant tests tend to exaggerate the true effect size.
+
+## Problem 3
+
+```{r}
+homicide_df =
+  read_csv("hw5 data/homicide-data.csv") |> 
+  mutate(
+    victim_age = na_if(victim_age, "Unknown"),  
+    victim_age = as.numeric(victim_age)     
+  )
+```
+The original data has `r ncol(homicide_df)` of homicide cases in 50 large U.S. cities, with notable variables such as `victim_age`, `victim_sex` and `victim_race`.
+
+```{r}
+homicide_df =
+  homicide_df |> 
+  mutate(
+    city_state = str_c(city, state, sep = ", ")
+  ) 
+
+homicide_df |>
+  group_by(city_state) |>
+  summarise(
+    total_homicides = n(),
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    .groups = "drop"
+  ) |> knitr::kable()
+```
+
+```{r}
+baltimore_summary =
+  homicide_df |> 
+  filter(city_state == "Baltimore, MD") |> 
+  summarise(
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    total = n()
+  )
+
+# prop.test
+baltimore_prop_test =
+  prop.test(
+    x = baltimore_summary$unsolved,
+    n = baltimore_summary$total
+)
+
+baltimore_prop_test |>  
+  broom::tidy() |>
+  select(estimate, conf.low, conf.high) |> 
+  knitr::kable()
+```
+
+
+```{r, warning = FALSE}
+# prop.test for all cities
+city_results =
+  homicide_df |>
+  group_by(city_state) |>
+  summarise(
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    total = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    test_result = map2(unsolved, total, \(x, n) prop.test(x = x, n = n)),
+    tidy_result = map(test_result, tidy)
+  ) |>
+  unnest(tidy_result) |>
+  select(city_state, estimate, conf.low, conf.high) 
+
+knitr::kable(city_results)
+```
+
+```{r city_plot, fig.width=8, fig.height=6}
+# plot for estimates and CIs for each city
+city_results |>
+  mutate(city_state = fct_reorder(city_state, estimate)) |>  # 依未破案比例排序
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point(size = 2, color = "steelblue") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "gray40") +
+  coord_flip() +
+  labs(
+    x = "City",
+    y = "Proportion of unsolved homicides (with 95% CI)",
+    title = "Estimated proportion of unsolved homicides by city"
+  ) +
+  theme_minimal(base_size = 10)
 ```
 

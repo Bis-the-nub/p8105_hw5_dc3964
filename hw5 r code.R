@@ -127,3 +127,78 @@ mean_estimates |>
     color = "Group"
   ) +
   theme_minimal(base_size = 14)
+
+## Problem 3
+homicide_df =
+  read_csv("hw5 data/homicide-data.csv") |> 
+  mutate(
+    victim_age = na_if(victim_age, "Unknown"),  
+    victim_age = as.numeric(victim_age)     
+  )
+
+homicide_df =
+  homicide_df |> 
+  mutate(
+    city_state = str_c(city, state, sep = ", ")
+  ) 
+
+homicide_df |>
+  group_by(city_state) |>
+  summarise(
+    total_homicides = n(),
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    .groups = "drop"
+  ) |> knitr::kable()
+
+baltimore_summary =
+  homicide_df |> 
+  filter(city_state == "Baltimore, MD") |> 
+  summarise(
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    total = n()
+  )
+
+# prop.test
+baltimore_prop_test =
+  prop.test(
+    x = baltimore_summary$unsolved,
+    n = baltimore_summary$total
+)
+
+baltimore_prop_test |>  
+  broom::tidy() |>
+  select(estimate, conf.low, conf.high) |> 
+  knitr::kable()
+
+# prop.test for all cities
+
+city_results =
+  homicide_df |>
+  group_by(city_state) |>
+  summarise(
+    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
+    total = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    test_result = map2(unsolved, total, \(x, n) prop.test(x = x, n = n)),
+    tidy_result = map(test_result, tidy)
+  ) |>
+  unnest(tidy_result) |>
+  select(city_state, estimate, conf.low, conf.high) 
+
+knitr::kable(city_results)
+# plot for estimates and CIs for each city
+
+city_results |>
+  mutate(city_state = fct_reorder(city_state, estimate)) |>  # 依未破案比例排序
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point(size = 2, color = "steelblue") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "gray40") +
+  coord_flip() +
+  labs(
+    x = "City",
+    y = "Proportion of unsolved homicides (with 95% CI)",
+    title = "Estimated proportion of unsolved homicides by city"
+  ) +
+  theme_minimal(base_size = 10)
