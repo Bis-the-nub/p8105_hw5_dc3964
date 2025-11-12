@@ -162,7 +162,7 @@ Therefore, The average μ head among rejected samples is not approximately equal
 
 ## Problem 3
 
-```{r}
+```{r, message = FALSE}
 homicide_df =
   read_csv("hw5 data/homicide-data.csv") |> 
   mutate(
@@ -234,7 +234,7 @@ knitr::kable(city_results)
 ```{r city_plot, fig.width=8, fig.height=6}
 # plot for estimates and CIs for each city
 city_results |>
-  mutate(city_state = fct_reorder(city_state, estimate)) |>  # 依未破案比例排序
+  mutate(city_state = fct_reorder(city_state, estimate)) |>  
   ggplot(aes(x = city_state, y = estimate)) +
   geom_point(size = 2, color = "steelblue") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "gray40") +
