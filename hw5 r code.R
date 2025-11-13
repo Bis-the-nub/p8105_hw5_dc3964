@@ -129,69 +129,63 @@ mean_estimates |>
   theme_minimal(base_size = 14)
 
 ## Problem 3
+# Cleaning data
 homicide_df =
   read_csv("hw5 data/homicide-data.csv") |> 
   mutate(
-    victim_age = na_if(victim_age, "Unknown"),  
-    victim_age = as.numeric(victim_age)     
+    victim_age = na_if(victim_age, "Unknown"),
+    victim_age = as.numeric(victim_age),
+    city_state = str_c(city, state, sep = ", ")
   )
 
-homicide_df =
-  homicide_df |> 
-  mutate(
-    city_state = str_c(city, state, sep = ", ")
-  ) 
-
-homicide_df |>
+# city unsolved case counting
+city_summary =
+  homicide_df |>
   group_by(city_state) |>
   summarise(
-    total_homicides = n(),
+    total = n(),
     unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
     .groups = "drop"
-  ) |> knitr::kable()
-
-baltimore_summary =
-  homicide_df |> 
-  filter(city_state == "Baltimore, MD") |> 
-  summarise(
-    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
-    total = n()
   )
+knitr::kable(city_summary)
 
-# prop.test
+# Baltimore prop.test
+baltimore_summary =
+  city_summary |> 
+  filter(city_state == "Baltimore, MD")
+
 baltimore_prop_test =
   prop.test(
     x = baltimore_summary$unsolved,
     n = baltimore_summary$total
-)
+  )
 
-baltimore_prop_test |>  
-  broom::tidy() |>
-  select(estimate, conf.low, conf.high) |> 
-  knitr::kable()
+# tidy baltimore results
+baltimore_result =
+  broom::tidy(baltimore_prop_test) |>
+  select(estimate, conf.low, conf.high)
 
-# prop.test for all cities
+knitr::kable(baltimore_result)
 
+# Setting up the function
+prop_test_city <- function(unsolved, total) {
+  broom::tidy(prop.test(unsolved, total))
+}
+
+# Run the function on all cities
 city_results =
-  homicide_df |>
-  group_by(city_state) |>
-  summarise(
-    unsolved = sum(disposition %in% c("Closed without arrest", "Open/No arrest")),
-    total = n(),
-    .groups = "drop"
-  ) |>
+  city_summary |>
   mutate(
-    test_result = map2(unsolved, total, \(x, n) prop.test(x = x, n = n)),
-    tidy_result = map(test_result, tidy)
+    test_result = map2(unsolved, total, prop_test_city)
   ) |>
-  unnest(tidy_result) |>
-  select(city_state, estimate, conf.low, conf.high) 
+  unnest(test_result) |>
+  select(city_state, estimate, conf.low, conf.high)
 
 knitr::kable(city_results)
-# plot for estimates and CIs for each city
 
+# plot for estimates and CIs for each city
 city_results |>
-  mutate(city_state = fct_reorder(city_state, estimate)) |>  # 依未破案比例排序
+  mutate(city_state = fct_reorder(city_state, estimate)) |>
   ggplot(aes(x = city_state, y = estimate)) +
   geom_point(size = 2, color = "steelblue") +
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "gray40") +
